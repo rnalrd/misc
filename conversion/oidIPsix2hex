@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+
+# Takes as input an IPv6 address in dotted decimal format
+# as often seen in SNMP MIB tables and convert it into
+# the well know columned hexadecimal format
+
+#BSD 2-Clause License
+#
+#Copyright (c) 2021, Leonardo
+#All rights reserved.
+#
+#Redistribution and use in source and binary forms, with or without
+#modification, are permitted provided that the following conditions are met:
+#
+#1. Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+#2. Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+#FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+#DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+#SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+#CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+#OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+#OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import sys
+
+addr = sys.argv[1]
+octet_list = addr.split('.')
+
+i = 0
+zero = 0
+zero_quartet = 0
+ipv6 = ''
+debug = False
+
+def octet2hex(octet):
+	octet_x = str(hex(int(octet)).replace('0x',''))
+	return octet_x
+
+def mydebug(msg,var):
+	print("debug: " + msg + " " + var)
+
+for octet in octet_list:
+	i = i + 1
+	# Even octet
+	if i % 2 == 0 and int(octet) != 0:
+		if debug:
+			mydebug("even octet",octet)
+		# If between 1-9 add '0' before
+		column_last = 0
+		# if octet is < 10 and odd octet <> 0 prepend "0"
+		if len(octet) == 1 and zero == 0:
+			octet = '0' + octet
+		# Check if above 16 and if last octet
+		if int(octet) > 16 and i != 16:
+			ipv6 = ipv6 + octet2hex(octet) + ':'
+		elif int(octet) > 16 and i == 16:
+			ipv6 = ipv6 + octet2hex(octet)
+		elif int(octet) <= 16 and i != 16:
+			ipv6 = ipv6 + octet + ':'
+		else:
+			ipv6 = ipv6 + octet
+		# Reset counter when changing quartet
+		if zero == 1:
+			zero = zero - 1
+		if debug:
+			mydebug("ipv6 now",ipv6)
+	# Odd octet
+	elif i % 2 != 0 and int(octet) != 0:
+		column_last = 0
+		if debug:
+			mydebug("odd octet",octet)
+		# Convert if above 16. Will never be last octet
+		if int(octet) > 16:
+			ipv6 = ipv6 + octet2hex(octet)
+		else:
+			ipv6 = ipv6 + octet
+		# Reset counters when changing quartet
+		if zero == 1:
+			zero = 0
+            column_last = 0
+		if debug:
+			mydebug("ipv6 now",ipv6)
+	elif int(octet) == 0:
+		if debug:
+			mydebug("octet",octet)
+		zero = zero + 1
+		# If we have 2 consecutive "0" octets print ":" and reset counter
+		if zero == 2 and zero_quartet == 0:
+			ipv6 = ipv6 + ':'
+			zero_quartet = zero_quartet + 1
+			zero = 0
+			column_last = 1
+		# If we have 2 consecutive "0" octets and we have already printed ":"
+		# print "0:"
+		if zero == 2 and zero_quartet == 1 and column_last == 0:
+			ipv6 = ipv6 + octet + ':'
+			zero = 0
+		if debug:
+			mydebug("ipv6 now",ipv6)
+
+print(ipv6)
